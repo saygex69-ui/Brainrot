@@ -1,0 +1,257 @@
+-- 🛑 Notification hợp lệ
+game.StarterGui:SetCore("SendNotification", {
+    Title = "Mạnh Hay Yếu",
+    Text = "Bạn muốn bật chế độ VIP không?",
+    Icon = "rbxassetid://92278047249087",
+    Duration = 1e5,
+    Button1 = "Mạnh",
+    Button2 = "Yếu"
+})
+
+-- 🖼️ Fluent UI
+local Fluent = loadstring(game:HttpGet("https://github.com/dawid-scripts/Fluent/releases/latest/download/main.lua"))()
+local Window = Fluent:CreateWindow({
+    Title = "si li côn tiền đình",
+    SubTitle = "PREMIUM",
+    TabWidth = 155,
+    Size = UDim2.fromOffset(500, 350),
+    Acrylic = true,
+    Theme = "Dark",
+    MinimizeKey = Enum.KeyCode.LeftControl
+})
+
+-- 🧱 Frame chứa button
+local main = Instance.new("Frame")
+main.Size = UDim2.new(0, 300, 0, 300)
+main.Position = UDim2.new(0, 100, 0, 100)
+main.BackgroundTransparency = 1
+main.Parent = Window
+
+-- 🔘 Tạo nút menu nổi
+local gui = Instance.new("ScreenGui", game.Players.LocalPlayer:WaitForChild("PlayerGui"))
+gui.Name = "FloatingButtonGui"
+
+local btnFrame = Instance.new("Frame", gui)
+btnFrame.Size = UDim2.new(0, 50, 0, 50)
+btnFrame.Position = UDim2.new(0, 20, 0.1, 0)
+btnFrame.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+btnFrame.BackgroundTransparency = 0
+Instance.new("UICorner", btnFrame).CornerRadius = UDim.new(1, 0)
+
+local img = Instance.new("ImageLabel", btnFrame)
+img.Size = UDim2.new(0, 40, 0, 40)
+img.Position = UDim2.new(0.5, 0, 0.5, 0)
+img.AnchorPoint = Vector2.new(0.5, 0.5)
+img.Image = "rbxassetid://92278047249087"
+img.BackgroundTransparency = 1
+
+local clickBtn = Instance.new("TextButton", btnFrame)
+clickBtn.Size = UDim2.new(1, 0, 1, 0)
+clickBtn.Text = ""
+clickBtn.BackgroundTransparency = 1
+
+local TweenService = game:GetService("TweenService")
+local VirtualInputManager = game:GetService("VirtualInputManager")
+local zoom = false
+local fade = false
+
+clickBtn.MouseButton1Down:Connect(function()
+    TweenService:Create(img, TweenInfo.new(0.25), {Size = zoom and UDim2.new(0, 40, 0, 40) or UDim2.new(0, 30, 0, 30)}):Play()
+    TweenService:Create(btnFrame, TweenInfo.new(0.25), {BackgroundTransparency = fade and 0 or 0.25}):Play()
+    zoom = not zoom
+    fade = not fade
+    VirtualInputManager:SendKeyEvent(true, "LeftControl", false, game)
+end)
+
+-- 📦 Dịch vụ & Biến
+local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
+local UserInputService = game:GetService("UserInputService")
+
+local player = Players.LocalPlayer
+local char = player.Character or player.CharacterAdded:Wait()
+local root = char:WaitForChild("HumanoidRootPart")
+local humanoid = char:FindFirstChildOfClass("Humanoid")
+
+player.CharacterAdded:Connect(function()
+    char = player.Character or player.CharacterAdded:Wait()
+    root = char:WaitForChild("HumanoidRootPart")
+    humanoid = char:FindFirstChildOfClass("Humanoid")
+end)
+
+-- 🎯 Chức năng
+local jumpEnabled = false
+_G.SlowFallJump = false
+_G.espEnabled = false
+local godConnection
+
+function setGodMode(on)
+    if humanoid then
+        humanoid.MaxHealth = on and math.huge or 100
+        humanoid.Health = on and math.huge or 100
+        if godConnection then godConnection:Disconnect() end
+        if on then
+            godConnection = humanoid:GetPropertyChangedSignal("Health"):Connect(function()
+                if humanoid.Health < math.huge then
+                    humanoid.Health = math.huge
+                end
+            end)
+        end
+    end
+end
+
+function setInvisible(on)
+    for _, part in ipairs(char:GetDescendants()) do
+        if part:IsA("BasePart") and part.Name ~= "HumanoidRootPart" then
+            part.Transparency = on and 1 or 0
+        elseif part:IsA("Decal") then
+            part.Transparency = on and 1 or 0
+        end
+    end
+end
+
+function antiStun(on)
+    if humanoid and on then
+        humanoid.PlatformStand = false
+        humanoid:ChangeState(Enum.HumanoidStateType.GettingUp)
+    end
+end
+
+UserInputService.JumpRequest:Connect(function()
+    if _G.SlowFallJump and humanoid and root then
+        root.AssemblyLinearVelocity = Vector3.new(0, 100, 0)
+        local conn
+        conn = RunService.Stepped:Connect(function()
+            if not humanoid or humanoid.FloorMaterial ~= Enum.Material.Air then
+                conn:Disconnect()
+            else
+                root.Velocity = Vector3.new(root.Velocity.X, math.clamp(root.Velocity.Y, -20, 150), root.Velocity.Z)
+            end
+        end)
+    end
+end)
+
+UserInputService.JumpRequest:Connect(function()
+    if jumpEnabled and humanoid then
+        humanoid:ChangeState(Enum.HumanoidStateType.Jumping)
+    end
+end)
+
+function applyESP(plr)
+    if plr == player then return end
+    local function addESP(char)
+        local hrp = char:FindFirstChild("HumanoidRootPart")
+        if not hrp then return end
+        if char:FindFirstChild("PlayerESP") then char.PlayerESP:Destroy() end
+
+        local highlight = Instance.new("Highlight", char)
+        highlight.Name = "PlayerESP"
+        highlight.FillColor = Color3.new(1, 0, 0)
+
+        local tag = Instance.new("BillboardGui", hrp)
+        tag.Name = "NameTag"
+        tag.Size = UDim2.new(0, 100, 0, 30)
+        tag.AlwaysOnTop = true
+        tag.StudsOffset = Vector3.new(0, 2, 0)
+
+        local label = Instance.new("TextLabel", tag)
+        label.Size = UDim2.new(1, 0, 1, 0)
+        label.Text = plr.DisplayName
+        label.BackgroundTransparency = 1
+        label.TextColor3 = Color3.new(1, 0, 0)
+        label.TextScaled = true
+    end
+
+    if plr.Character then addESP(plr.Character) end
+    plr.CharacterAdded:Connect(function(c)
+        c:WaitForChild("HumanoidRootPart")
+        addESP(c)
+    end)
+end
+
+function setESPPlayer(on)
+    _G.espEnabled = on
+    if on then
+        for _, plr in pairs(Players:GetPlayers()) do applyESP(plr) end
+        Players.PlayerAdded:Connect(applyESP)
+    else
+        for _, plr in pairs(Players:GetPlayers()) do
+            if plr.Character then
+                local c = plr.Character
+                if c:FindFirstChild("PlayerESP") then c.PlayerESP:Destroy() end
+                local hrp = c:FindFirstChild("HumanoidRootPart")
+                if hrp and hrp:FindFirstChild("NameTag") then hrp.NameTag:Destroy() end
+            end
+        end
+    end
+end
+
+-- 🚪 Teleport
+local doorPositions = {
+    Vector3.new(-466,-1,220), Vector3.new(-466,-2,116), Vector3.new(-466,-2,8),
+    Vector3.new(-464,-2,-102), Vector3.new(-351,-2,-100), Vector3.new(-354,-2,5),
+    Vector3.new(-354,-2,115), Vector3.new(-358,-2,223)
+}
+
+local function getNearestDoor()
+    local closest, dist = nil, math.huge
+    for _, pos in pairs(doorPositions) do
+        local d = (root.Position - pos).Magnitude
+        if d < dist then
+            dist = d
+            closest = pos
+        end
+    end
+    return closest
+end
+
+local function goUp()
+    local pos = getNearestDoor()
+    if pos then
+        TweenService:Create(root, TweenInfo.new(1.2), {CFrame = CFrame.new(pos)}):Play()
+        wait(1.3)
+        root.CFrame = root.CFrame + Vector3.new(0, 200, 0)
+    end
+end
+
+local function dropDown()
+    root.CFrame = root.CFrame - Vector3.new(0, 50, 0)
+end
+
+-- 🔘 Tạo nút
+local function createButton(name, callback)
+    local btn = Instance.new("TextButton", main)
+    btn.Size = UDim2.new(1, -20, 0, 35)
+    btn.Position = UDim2.new(0, 10, 0, #main:GetChildren() * 40)
+    btn.BackgroundColor3 = Color3.fromRGB(60, 60, 60)
+    btn.TextColor3 = Color3.new(1, 1, 1)
+    btn.Text = name
+    btn.Font = Enum.Font.GothamBold
+    btn.TextSize = 14
+    local toggled = false
+    Instance.new("UICorner", btn).CornerRadius = UDim.new(0, 6)
+    btn.MouseButton1Click:Connect(function()
+        toggled = not toggled
+        btn.BackgroundColor3 = toggled and Color3.fromRGB(0, 170, 0) or Color3.fromRGB(60, 60, 60)
+        callback(toggled)
+    end)
+end
+
+-- 🧠 Tạo nút chức năng
+createButton("Đi lên cửa gần nhất", function(on) if on then goUp() end end)
+createButton("Đi xuống", function(on) if on then dropDown() end end)
+createButton("Nhảy như silicôn", function(on)
+    jumpEnabled = on
+    if humanoid then humanoid.JumpPower = on and 250 or 50 end
+end)
+createButton("Bất tử", setGodMode)
+createButton("Tàng hình", setInvisible)
+createButton("Chậm rơi", function(on) _G.SlowFallJump = on end)
+createButton("ESP người chơi", setESPPlayer)
+createButton("Chống stun", antiStun)
+
+-- 🔊 Âm thanh
+local sound = Instance.new("Sound", gui)
+sound.SoundId = "rbxassetid://113018204052536"
+sound.Volume = 1
+sound:Play()
